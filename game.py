@@ -9,8 +9,25 @@ class ChessGame:
     def start(self):
         while True:
             self.board.display()
+
+            if self.board.is_checkmate(self.turn):
+                winner = 'black' if self.turn == 'white' else 'white'
+                print("\n" + "=" * 35)
+                print(f"|       CHECKMATE! {winner.upper()} WINS!    |")
+                print("=" * 35 + "\n")
+                play_again = input("Would you like to play again? (Y/N): ").strip().lower()
+                if play_again.startswith('y'):
+                    self.__init__()  # reinitialize the game
+                    continue
+                else:
+                    print("Thanks for playing!")
+                    break
+
+            elif self.board.is_in_check(self.turn):
+                print("CHECK!")
+
             print(f"{self.turn.capitalize()}'s move")
-            move = input("Enter move (e.g., e2 e4): ").strip().lower()
+            move = input("Enter move (e.g., e2 e4 or 'quit'): ").strip().lower()
 
             if move == 'quit':
                 print("Thanks for playing!")
