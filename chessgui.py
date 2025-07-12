@@ -30,20 +30,29 @@ class ChessGUI:
 
         self.images = {}
 
-        # Load piece images
         for color in colors:
             for piece in piece_types:
                 filename = f"{color}_{piece}.png"
                 path = os.path.join(base_path, filename)
                 try:
                     pil_img = Image.open(path).convert("RGBA")
+                    # Make pure white pixels transparent (for black pieces with white backgrounds)
+                    datas = pil_img.getdata()
+                    newData = []
+                    for item in datas:
+                        # treat any pixel with R=G=B=255 as transparent
+                        if item[:3] == (255, 255, 255):
+                            newData.append((255, 255, 255, 0))
+                        else:
+                            newData.append(item)
+                    pil_img.putdata(newData)
                     pil_img = pil_img.resize((self.square_size, self.square_size), Image.LANCZOS)
                     tk_img = ImageTk.PhotoImage(pil_img)
                     self.images[f"{color}_{piece}"] = tk_img
                 except Exception as e:
                     print(f"Failed to load {filename}: {e}")
 
-        # Create a transparent image for empty squares
+        # Transparent placeholder for empty squares
         empty = Image.new("RGBA", (self.square_size, self.square_size), (255, 255, 255, 0))
         self.empty_image = ImageTk.PhotoImage(empty)
 
@@ -53,22 +62,24 @@ class ChessGUI:
                 piece = self.board.board[row][col]
                 default_color = "#e3e3e3" if (row + col) % 2 == 0 else "#888888"
 
+                # Determine square color
                 bg_color = default_color
                 if self.selected == (row, col):
                     bg_color = "lightblue"
                 elif (row, col) in self.valid_moves:
                     target_piece = self.board.board[row][col]
                     if target_piece and target_piece.color != self.turn:
-                        bg_color = "red"
+                        bg_color = "#ff5555"  # Bright red for capturable piece
                     else:
-                        bg_color = "lightgreen"
+                        bg_color = "lightgreen"  # Green for empty valid move
 
+                # Set image
                 if piece:
                     piece_type = piece.__class__.__name__.lower()
                     image_key = f"{piece.color}_{piece_type}"
                     image = self.images.get(image_key)
                 else:
-                    image = self.empty_image  # Use the transparent image
+                    image = self.empty_image  # Use transparent image for empty square
 
                 if self.buttons[row][col] is None:
                     btn = Button(
@@ -84,7 +95,7 @@ class ChessGUI:
                     self.buttons[row][col] = btn
                 else:
                     self.buttons[row][col].config(image=image, text="", bg=bg_color)
-                self.buttons[row][col].image = image  # Keep reference
+                self.buttons[row][col].image = image  # Prevent garbage collection
 
     def on_click(self, row, col):
         piece = self.board.board[row][col]
@@ -105,9 +116,3 @@ class ChessGUI:
             self.selected = (row, col)
             self.valid_moves = piece.get_valid_moves(self.board)
             self.draw_board()
-
-
-if __name__ == "__main__":
-    root = Tk()
-    app = ChessGUI(root)
-    root.mainloop()
