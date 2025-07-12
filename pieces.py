@@ -2,11 +2,11 @@ class Piece:
     def __init__(self, color):
         self.color = color
 
-    def get_valid_moves(self, board, row, col):
+    def get_valid_moves(self, board, row, col, gui=None):
         raise NotImplementedError("This method should be overridden by subclasses.")
 
 class King(Piece):
-    def get_valid_moves(self, board, row, col):
+    def get_valid_moves(self, board, row, col, gui=None):
         moves = []
         directions = [(-1, -1), (-1, 0), (-1, 1),
                       (0, -1),          (0, 1),
@@ -20,12 +20,12 @@ class King(Piece):
         return moves
 
 class Queen(Piece):
-    def get_valid_moves(self, board, row, col):
-        return Rook(self.color).get_valid_moves(board, row, col) + \
-               Bishop(self.color).get_valid_moves(board, row, col)
+    def get_valid_moves(self, board, row, col, gui=None):
+        return Rook(self.color).get_valid_moves(board, row, col, gui) + \
+               Bishop(self.color).get_valid_moves(board, row, col, gui)
 
 class Rook(Piece):
-    def get_valid_moves(self, board, row, col):
+    def get_valid_moves(self, board, row, col, gui=None):
         moves = []
         for dr, dc in [(-1,0), (1,0), (0,-1), (0,1)]:
             r, c = row + dr, col + dc
@@ -43,25 +43,34 @@ class Rook(Piece):
         return moves
 
 class Bishop(Piece):
-    def get_valid_moves(self, board, row, col):
+    def get_valid_moves(self, board, row, col, gui=None):
         moves = []
+        ghost = False
+        if gui:
+            ghost = gui.bishop_ghost_active.get(self.color, False)
         for dr, dc in [(-1,-1), (-1,1), (1,-1), (1,1)]:
             r, c = row + dr, col + dc
             while 0 <= r < 8 and 0 <= c < 8:
                 target = board.board[r][c]
                 if not target:
                     moves.append((r, c))
+                elif target.color == self.color:
+                    if ghost:
+                        moves.append((r, c))
+                        r += dr
+                        c += dc
+                        continue
+                    else:
+                        break
                 elif target.color != self.color:
                     moves.append((r, c))
-                    break
-                else:
                     break
                 r += dr
                 c += dc
         return moves
 
 class Knight(Piece):
-    def get_valid_moves(self, board, row, col):
+    def get_valid_moves(self, board, row, col, gui=None):
         moves = []
         for dr, dc in [(-2, -1), (-2, 1), (-1, -2), (-1, 2),
                        (1, -2), (1, 2), (2, -1), (2, 1)]:
@@ -73,16 +82,28 @@ class Knight(Piece):
         return moves
 
 class Pawn(Piece):
-    def get_valid_moves(self, board, row, col):
+    def get_valid_moves(self, board, row, col, gui=None):
         moves = []
         direction = -1 if self.color == 'white' else 1
         start_row = 6 if self.color == 'white' else 1
-        # Forward move
-        if 0 <= row + direction < 8 and not board.board[row + direction][col]:
-            moves.append((row + direction, col))
-            # Double move from starting position
-            if row == start_row and not board.board[row + 2 * direction][col]:
-                moves.append((row + 2 * direction, col))
+        max_steps = 1
+
+        # Card: PawnBoostCard effect
+        if gui:
+            hand = gui.hands.get(self.color, [])
+            # If the card is being played, it will call special effect directly,
+            # but for now we just check for active boost (could set a flag if you want)
+            if hasattr(gui, "pawn_boost_active") and gui.pawn_boost_active.get((row, col), False):
+                max_steps = 3
+            elif row == start_row:
+                max_steps = 2
+
+        for step in range(1, max_steps + 1):
+            r = row + direction * step
+            if 0 <= r < 8 and not board.board[r][col]:
+                moves.append((r, col))
+            else:
+                break
         # Captures
         for dc in [-1, 1]:
             r, c = row + direction, col + dc

@@ -7,7 +7,6 @@ class Board:
         self.reset_board()
 
     def reset_board(self):
-        # Place pieces for both colors
         for col, piece in enumerate([Rook, Knight, Bishop, Queen, King, Bishop, Knight, Rook]):
             self.board[0][col] = piece('black')
             self.board[7][col] = piece('white')
@@ -40,7 +39,7 @@ class Board:
             return False
         for row in range(8):
             for col in range(8):
-                piece = self.board[row][col]
+                piece = self.board.board[row][col]
                 if piece and piece.color != color:
                     moves = piece.get_valid_moves(self, row, col)
                     if king_pos in moves:
@@ -51,7 +50,7 @@ class Board:
         moves = []
         for row in range(8):
             for col in range(8):
-                piece = self.board[row][col]
+                piece = self.board.board[row][col]
                 if piece and piece.color == color:
                     for move in piece.get_valid_moves(self, row, col):
                         b_copy = self.copy()
