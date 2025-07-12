@@ -1,5 +1,5 @@
 import os
-from tkinter import Tk, Frame, Button
+from tkinter import Tk, Frame, Button, messagebox
 from board import Board
 from PIL import Image, ImageTk
 
@@ -12,8 +12,7 @@ class ChessGUI:
         self.turn = 'white'
         self.selected = None
         self.valid_moves = []
-
-        self.square_size = 64  # Size for all squares/pieces
+        self.square_size = 64
 
         self.board_frame = Frame(self.root)
         self.board_frame.pack()
@@ -36,11 +35,10 @@ class ChessGUI:
                 path = os.path.join(base_path, filename)
                 try:
                     pil_img = Image.open(path).convert("RGBA")
-                    # Make pure white pixels transparent (for black pieces with white backgrounds)
+                    # Transparentize pure white backgrounds
                     datas = pil_img.getdata()
                     newData = []
                     for item in datas:
-                        # treat any pixel with R=G=B=255 as transparent
                         if item[:3] == (255, 255, 255):
                             newData.append((255, 255, 255, 0))
                         else:
@@ -52,7 +50,6 @@ class ChessGUI:
                 except Exception as e:
                     print(f"Failed to load {filename}: {e}")
 
-        # Transparent placeholder for empty squares
         empty = Image.new("RGBA", (self.square_size, self.square_size), (255, 255, 255, 0))
         self.empty_image = ImageTk.PhotoImage(empty)
 
@@ -62,24 +59,22 @@ class ChessGUI:
                 piece = self.board.board[row][col]
                 default_color = "#e3e3e3" if (row + col) % 2 == 0 else "#888888"
 
-                # Determine square color
                 bg_color = default_color
                 if self.selected == (row, col):
                     bg_color = "lightblue"
                 elif (row, col) in self.valid_moves:
                     target_piece = self.board.board[row][col]
                     if target_piece and target_piece.color != self.turn:
-                        bg_color = "#ff5555"  # Bright red for capturable piece
+                        bg_color = "#ff5555"  # Red for capturable
                     else:
-                        bg_color = "lightgreen"  # Green for empty valid move
+                        bg_color = "lightgreen"  # Green for normal move
 
-                # Set image
                 if piece:
                     piece_type = piece.__class__.__name__.lower()
                     image_key = f"{piece.color}_{piece_type}"
                     image = self.images.get(image_key)
                 else:
-                    image = self.empty_image  # Use transparent image for empty square
+                    image = self.empty_image
 
                 if self.buttons[row][col] is None:
                     btn = Button(
@@ -95,17 +90,29 @@ class ChessGUI:
                     self.buttons[row][col] = btn
                 else:
                     self.buttons[row][col].config(image=image, text="", bg=bg_color)
-                self.buttons[row][col].image = image  # Prevent garbage collection
+                self.buttons[row][col].image = image
 
     def on_click(self, row, col):
         piece = self.board.board[row][col]
-
         if self.selected:
             from_row, from_col = self.selected
             moving_piece = self.board.board[from_row][from_col]
 
             if (row, col) in self.valid_moves:
                 self.board.move_piece(from_row, from_col, row, col)
+                if self.board.is_checkmate('black' if self.turn == 'white' else 'white'):
+                    self.draw_board()
+                    messagebox.showinfo("Checkmate", f"{self.turn.capitalize()} wins by checkmate!")
+                    self.root.quit()
+                    return
+                elif self.board.is_stalemate('black' if self.turn == 'white' else 'white'):
+                    self.draw_board()
+                    messagebox.showinfo("Stalemate", "Stalemate! The game is a draw.")
+                    self.root.quit()
+                    return
+                elif self.board.is_in_check('black' if self.turn == 'white' else 'white'):
+                    messagebox.showinfo("Check", f"{('Black' if self.turn == 'white' else 'White')} is in check!")
+
                 self.turn = 'black' if self.turn == 'white' else 'white'
 
             self.selected = None
@@ -114,5 +121,12 @@ class ChessGUI:
 
         elif piece and piece.color == self.turn:
             self.selected = (row, col)
-            self.valid_moves = piece.get_valid_moves(self.board)
+            # Filter out moves that would leave king in check
+            all_moves = piece.get_valid_moves(self.board, row, col)
+            self.valid_moves = []
+            for (r, c) in all_moves:
+                board_copy = self.board.copy()
+                board_copy.move_piece(row, col, r, c)
+                if not board_copy.is_in_check(self.turn):
+                    self.valid_moves.append((r, c))
             self.draw_board()
