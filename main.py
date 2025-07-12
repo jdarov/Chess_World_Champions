@@ -1,11 +1,12 @@
 # main.py
 
-from game import ChessGame
-from board import Board
+from tkinter import Tk
+from chessgui import ChessGUI
 
 def main():
-    game = ChessGame()
-    game.start()
+    root = Tk()
+    app = ChessGUI(root)
+    root.mainloop()
 
 if __name__ == "__main__":
     main()
