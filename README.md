@@ -1,124 +1,116 @@
 # ♛ Chess World Champions ♚  
-*Where Classic Chess Meets Card-Based Chaos*
 
-Welcome to **Chess World Champions** — a revolutionary reimagining of the timeless game of chess! This project combines the elegance of chess with the unpredictability and power-ups of a card-based mechanic, creating a unique PvP experience like no other.
-
----
-
-## 🚀 Project Status
-
-🎯 **Current Phase**: MVP Development  
-🧠 **Technologies**: Python (core game logic), HTML/CSS/JavaScript (web frontend), JSON (deck storage), and NFT integration (coming soon)
+> *Classic Chess. Card-Based Chaos. The Next Evolution.*
 
 ---
 
-## 🔥 Core Concept
+## 🎲 1. What is Chess World Champions?
 
-Chess World Champions blends traditional chess with **collectible cards** that alter gameplay dynamics. Each player gets:
-
-- ♟ **A standard chessboard and pieces**
-- 🃏 **A deck of 10 cards**
-- 🎴 **A hand of 3 cards** drawn at the start of the match
-- 🔁 On each turn, the player can **move a piece OR play/draw a card**
-
-Cards influence gameplay by:
-- Modifying piece movement  
-- Changing board state  
-- Triggering traps or boosts  
-- Offering powerful one-time effects  
+**Chess World Champions** is a strategic, multiplayer chess game infused with collectible card mechanics.  
+Outwit your opponent using both time-honored chess tactics and powerful, game-changing cards in a reimagined battle of wits!
 
 ---
 
-## 📜 Rules & Mechanics
+## 🎯 2. Purpose of the Game
 
-- 🧩 **Turn Structure**:
-  1. Choose to **move** a piece *or* **play/draw** a card
-  2. Cards can only be played during your turn
-  3. Victory is by **checkmate**
-
----
-
-## 🧬 NFT Integration (Coming Soon)
-
-Each chess piece will be backed by a unique NFT from the upcoming **Chess World Champions NFT Collection**:
-
-- 🔗 **10,000 NFTs**  
-- 🎨 Each piece has:
-  - 3 unique traits (e.g., Armor, Weapon, Secondary (shield, dual-wield, spell, etc))  
-  - Rarity tiers (Common → Legendary)  
-- 💎 Owning NFTs will unlock **exclusive cards**, **visual skins**, and **legendary perks** in-game  
+The purpose is simple:  
+- **Win by checkmate** or outmaneuver your opponent using a unique set of cards that modify movement, trigger effects, or alter the board state.
+- Experience chess like never before—every match is unpredictable, tactical, and full of surprises.
+- This MVP (Minimum Viable Product) is the foundation for a future full-featured app, web version, and potential commercial release.
 
 ---
 
-## 🌐 Website & Web App (Coming Soon)
+## 🔁 3. Game Logic & Flow
 
-A dynamic front-end experience is in the works! Planned features:
+### **Turn Structure:**
+1. **Player's Turn:**  
+   - Choose to **move a piece** *or* **play/draw a card** from your hand.
+2. **Card Play:**  
+   - Cards are one-time use, with effects ranging from boosting pawns, allowing power moves, or removing opponent pieces (except the king/queen!).
+   - Card effects last for the current turn only.
+3. **Victory:**  
+   - Standard chess victory (checkmate).
+   - Optional: "First to 20 points" mode for fast games (see below).
 
-- 🖥️ Play matches in browser (React.js)  
-- 💼 Connect wallet for NFT holders  
-- 🏆 Ranked multiplayer & matchmaking (v2)  
-- 🧾 Deck customization for power users  
+### **Card System:**
+- Each player starts with a hand of 3 cards.
+- Decks and additional cards will be added in future versions.
+- Card examples:  
+  - Pawn Boost (move pawns up to 3 spaces)  
+  - Bishop Ghost (bishop passes through friendly pieces)  
+  - Destroy Opponent Piece (remove any non-king/queen enemy piece)
 
 ---
 
-## 📂 Project Structure
+## 📁 4. Project Structure
 
 ```
 Chess_World_Champions/
-├── game_logic/           # Core rules and chess + card engine
-├── card_data/            # JSON files defining card abilities and effects
-├── ui/                   # CLI for now, Web UI in planning
-├── nft_assets/           # Placeholder folder for NFT trait images/designs
-└── README.md             # You're reading it!
+├── game_logic/           # Core chess rules and card engine
+├── card_data/            # JSON files for card definitions
+├── ui/                   # CLI for now, web UI in planning
+├── nft_assets/           # Placeholder for NFT artwork
+├── assets/               # Piece images, icons, and graphics
+└── README.md             # This file!
 ```
 
 ---
 
-## 👨‍💻 Author
+## ⚙️ 5. Getting Started & Requirements
 
-Made with ♟️ & ❤️ by **Joshua Darovitz**  
-Follow the journey: [YouTube: Jdarov | From Diesel to Debugging](https://www.youtube.com/@jdarov)  
-Support or collaborate? DM me!
+To run or contribute to this project, you'll need:
 
----
+- **Python 3.8+**
+- **Pillow** (`pip install Pillow`)
+- **tkinter** (usually included with Python)
+- (Optional) Other dependencies as features are added
 
-## 📅 Roadmap
-
-- ✅ Build MVP core logic (chess + card draw/play)  
-- ⏳ Launch static site + deploy rules  
-- 🔜 Release 10-card starter deck  
-- 🔜 Publish NFT collection (OpenSea)  
-- 🔜 Web multiplayer support (v2)  
-
----
-
-## 🔮 Future Considerations
-
-### 🧮 Scoring Alternative (Optional Mode - Post MVP)
-
-A capture-based points system as a win condition:
-
-- Pawn: 1 pt  
-- Knight/Bishop: 3 pts  
-- Rook: 5 pts  
-- Queen: 9 pts  
-- **First to 20 points wins** (if checkmate isn’t achieved)
-
-This mode would allow shorter, faster-paced games with strategic aggression.
+**Quickstart:**
+```bash
+git clone https://github.com/jdarov/Chess_World_Champions.git
+cd Chess_World_Champions
+pip install Pillow
+python main.py
+```
+*(Replace `main.py` with your entry-point script if different)*
 
 ---
 
-## 🧠 Philosophy
+## 🛡️ 6. Copyright & Contribution
+
+This project is copyright © 2025  
+**Joshua Darovitz (jdarov)**
+
+- Forks, issues, and contributions are encouraged!
+- Please **reference the original author** in your forks and derivative works.
+- Commercial use or redistribution requires explicit permission.
+- Card ideas, logic tweaks, and UI improvements are welcome—just open an issue or a pull request.
+
+---
+
+## 🚀 Roadmap
+
+- ✅ Chess + card MVP (local multiplayer)
+- ⏳ Web UI in React.js
+- 🔜 Deck customization & more cards
+- 🔜 NFT integration for unique piece skins, traits, and exclusive cards
+- 🔜 Online play & ranking
+
+---
+
+## 💡 Philosophy
 
 > "Chess is a war over the board. The object is to crush the opponent’s mind."  
-> *— Bobby Fischer*
+> — Bobby Fischer
 
-We’re taking that war to a whole new battlefield. 💥  
-Join the revolution.
+With Chess World Champions, the *battlefield just got a lot more unpredictable.*  
+Play smart. Play bold. Play your cards right.
 
 ---
 
-## 📩 Contribute / Ideas?
+## 📫 Contact & Support
 
-Pull requests, issues, and card ideas are welcome!  
-Feel free to fork and innovate. Let’s build this together!
+- Author: [Joshua Darovitz (jdarov)](https://github.com/jdarov)
+- [YouTube: Jdarov | From Diesel to Debugging](https://www.youtube.com/@jdarov)
+
+Have fun, and checkmate with style!
