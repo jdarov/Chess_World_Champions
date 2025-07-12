@@ -88,12 +88,11 @@ class Pawn(Piece):
         start_row = 6 if self.color == 'white' else 1
         max_steps = 1
 
-        # Card: PawnBoostCard effect (stub)
-        if gui:
-            if hasattr(gui, "pawn_boost_active") and gui.pawn_boost_active.get((row, col), False):
-                max_steps = 3
-            elif row == start_row:
-                max_steps = 2
+        # Pawn boost card logic: allow 1, 2, or 3 steps from starting square if boost is active
+        if gui and gui.pawn_boost_active.get(self.color, False) and row == start_row:
+            max_steps = 3
+        elif row == start_row:
+            max_steps = 2
 
         for step in range(1, max_steps + 1):
             r = row + direction * step
