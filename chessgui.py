@@ -1,7 +1,8 @@
 import os
-from tkinter import Tk, Frame, Button, messagebox
+from tkinter import Tk, Frame, Button, messagebox, simpledialog
 from board import Board
 from PIL import Image, ImageTk
+from card import PawnBoostCard, BishopGhostCard, DestroyOpponentPieceCard
 
 class ChessGUI:
     def __init__(self, root):
@@ -19,8 +20,18 @@ class ChessGUI:
 
         self.buttons = [[None for _ in range(8)] for _ in range(8)]
 
+        # Card system
+        self.hands = {
+            'white': [PawnBoostCard(), BishopGhostCard(), DestroyOpponentPieceCard()],
+            'black': [PawnBoostCard(), BishopGhostCard(), DestroyOpponentPieceCard()]
+        }
+        self.bishop_ghost_active = {'white': False, 'black': False}
+        self.pawn_boost_active = {'white': False, 'black': False}
+        self.active_card = None  # Track the card being played
+
         self.load_piece_images()
         self.draw_board()
+        self.show_turn()
 
     def load_piece_images(self):
         base_path = os.path.join("assets", "pieces")
@@ -35,7 +46,6 @@ class ChessGUI:
                 path = os.path.join(base_path, filename)
                 try:
                     pil_img = Image.open(path).convert("RGBA")
-                    # Transparentize pure white backgrounds
                     datas = pil_img.getdata()
                     newData = []
                     for item in datas:
@@ -65,9 +75,9 @@ class ChessGUI:
                 elif (row, col) in self.valid_moves:
                     target_piece = self.board.board[row][col]
                     if target_piece and target_piece.color != self.turn:
-                        bg_color = "#ff5555"  # Red for capturable
+                        bg_color = "#ff5555"
                     else:
-                        bg_color = "lightgreen"  # Green for normal move
+                        bg_color = "lightgreen"
 
                 if piece:
                     piece_type = piece.__class__.__name__.lower()
@@ -92,6 +102,92 @@ class ChessGUI:
                     self.buttons[row][col].config(image=image, text="", bg=bg_color)
                 self.buttons[row][col].image = image
 
+    def show_turn(self):
+        hand = self.hands[self.turn]
+        card_options = "\n".join([f"{i+1}. {card.name} ({card.description})" for i, card in enumerate(hand)])
+        move_or_card = simpledialog.askstring(
+            "Your Move",
+            f"{self.turn.capitalize()}'s turn!\n\nType 'move' to move a piece, or:\n{card_options}\nType the number to play a card."
+        )
+        if move_or_card and move_or_card.strip().lower() == "move":
+            # Wait for board click as usual
+            return
+        elif move_or_card and move_or_card.strip().isdigit():
+            idx = int(move_or_card.strip()) - 1
+            if 0 <= idx < len(hand):
+                card = hand[idx]
+                if card.can_play(self):
+                    self.active_card = card    # Set active card
+                    # Activate effect flags if needed
+                    if isinstance(card, BishopGhostCard):
+                        self.bishop_ghost_active[self.turn] = True
+                    elif isinstance(card, PawnBoostCard):
+                        self.pawn_boost_active[self.turn] = True
+                    # For DestroyOpponentPieceCard, prompt for action immediately
+                    if isinstance(card, DestroyOpponentPieceCard):
+                        self.handle_destroy_card()
+                        self.hands[self.turn].remove(card)
+                        self.active_card = None
+                        self.end_turn()
+                        return
+                    else:
+                        messagebox.showinfo("Card Activated", f"{card.name} is active. Make your move using the card's effect.")
+                        self.selected = None
+                        self.valid_moves = []
+                        self.draw_board()
+                        # Wait for player to move
+                        return
+                else:
+                    messagebox.showinfo("Card", "This card cannot be played at this time!")
+                    self.show_turn()
+            else:
+                self.show_turn()
+        else:
+            self.show_turn()
+
+    def handle_destroy_card(self):
+        # Highlight all opponent pieces on your opponent's side and prompt user to select one
+        opponent = 'black' if self.turn == 'white' else 'white'
+        if self.turn == 'white':
+            valid_rows = range(0, 4)
+        else:
+            valid_rows = range(4, 8)
+        valid_targets = []
+        for row in valid_rows:
+            for col in range(8):
+                piece = self.board.board[row][col]
+                if piece and piece.color == opponent:
+                    valid_targets.append((row, col))
+        if not valid_targets:
+            messagebox.showinfo("Destroy", "No valid opponent pieces to destroy on their side.")
+            return
+        # Ask for coordinates
+        coord_str = "\n".join([f"{i+1}: {self.coord_to_alg(row, col)}" for i, (row, col) in enumerate(valid_targets)])
+        pick = simpledialog.askstring(
+            "Destroy Opponent Piece",
+            f"Select one opponent piece to destroy:\n{coord_str}\nType the number."
+        )
+        if pick and pick.strip().isdigit():
+            idx = int(pick.strip()) - 1
+            if 0 <= idx < len(valid_targets):
+                row, col = valid_targets[idx]
+                self.board.board[row][col] = None
+                self.draw_board()
+                messagebox.showinfo("Destroyed", f"Piece at {self.coord_to_alg(row, col)} destroyed.")
+
+    def coord_to_alg(self, row, col):
+        return f"{chr(ord('a')+col)}{8-row}"
+
+    def end_turn(self):
+        self.bishop_ghost_active[self.turn] = False
+        self.pawn_boost_active[self.turn] = False
+        self.active_card = None
+        self.turn = 'black' if self.turn == 'white' else 'white'
+        self.selected = None
+        self.valid_moves = []
+        self.draw_board()
+        self.show_turn()
+
     def on_click(self, row, col):
         piece = self.board.board[row][col]
         if self.selected:
@@ -99,21 +195,31 @@ class ChessGUI:
             moving_piece = self.board.board[from_row][from_col]
 
             if (row, col) in self.valid_moves:
+                # If a card is active, apply its effect (most will be handled in get_valid_moves)
                 self.board.move_piece(from_row, from_col, row, col)
-                if self.board.is_checkmate('black' if self.turn == 'white' else 'white'):
+                # If a card was active, remove it from hand and reset flag
+                if self.active_card:
+                    if self.active_card in self.hands[self.turn]:
+                        self.hands[self.turn].remove(self.active_card)
+                    self.active_card = None
+                    self.bishop_ghost_active[self.turn] = False
+                    self.pawn_boost_active[self.turn] = False
+                # Check for checkmate/stalemate/etc
+                opponent = 'black' if self.turn == 'white' else 'white'
+                if self.board.is_checkmate(opponent):
                     self.draw_board()
                     messagebox.showinfo("Checkmate", f"{self.turn.capitalize()} wins by checkmate!")
                     self.root.quit()
                     return
-                elif self.board.is_stalemate('black' if self.turn == 'white' else 'white'):
+                elif self.board.is_stalemate(opponent):
                     self.draw_board()
                     messagebox.showinfo("Stalemate", "Stalemate! The game is a draw.")
                     self.root.quit()
                     return
-                elif self.board.is_in_check('black' if self.turn == 'white' else 'white'):
+                elif self.board.is_in_check(opponent):
                     messagebox.showinfo("Check", f"{('Black' if self.turn == 'white' else 'White')} is in check!")
-
-                self.turn = 'black' if self.turn == 'white' else 'white'
+                self.end_turn()
+                return
 
             self.selected = None
             self.valid_moves = []
@@ -121,8 +227,8 @@ class ChessGUI:
 
         elif piece and piece.color == self.turn:
             self.selected = (row, col)
-            # Filter out moves that would leave king in check
-            all_moves = piece.get_valid_moves(self.board, row, col)
+            # Use card effect if active
+            all_moves = piece.get_valid_moves(self.board, row, col, self)
             self.valid_moves = []
             for (r, c) in all_moves:
                 board_copy = self.board.copy()

@@ -39,7 +39,7 @@ class Board:
             return False
         for row in range(8):
             for col in range(8):
-                piece = self.board.board[row][col]
+                piece = self.board[row][col]
                 if piece and piece.color != color:
                     moves = piece.get_valid_moves(self, row, col)
                     if king_pos in moves:
@@ -50,7 +50,7 @@ class Board:
         moves = []
         for row in range(8):
             for col in range(8):
-                piece = self.board.board[row][col]
+                piece = self.board[row][col]
                 if piece and piece.color == color:
                     for move in piece.get_valid_moves(self, row, col):
                         b_copy = self.copy()

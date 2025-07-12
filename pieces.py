@@ -88,11 +88,8 @@ class Pawn(Piece):
         start_row = 6 if self.color == 'white' else 1
         max_steps = 1
 
-        # Card: PawnBoostCard effect
+        # Card: PawnBoostCard effect (stub)
         if gui:
-            hand = gui.hands.get(self.color, [])
-            # If the card is being played, it will call special effect directly,
-            # but for now we just check for active boost (could set a flag if you want)
             if hasattr(gui, "pawn_boost_active") and gui.pawn_boost_active.get((row, col), False):
                 max_steps = 3
             elif row == start_row:
