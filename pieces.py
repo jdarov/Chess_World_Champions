@@ -52,19 +52,22 @@ class Bishop(Piece):
             r, c = row + dr, col + dc
             while 0 <= r < 8 and 0 <= c < 8:
                 target = board.board[r][c]
-                if not target:
-                    moves.append((r, c))
-                elif target.color == self.color:
-                    if ghost:
+                if ghost:
+                    # Only allow empty squares as destinations (no captures)
+                    if not target:
                         moves.append((r, c))
-                        r += dr
-                        c += dc
-                        continue
-                    else:
+                    # Can pass through any piece, but can't land on any piece
+                    r += dr
+                    c += dc
+                    continue
+                else:
+                    if not target:
+                        moves.append((r, c))
+                    elif target.color == self.color:
                         break
-                elif target.color != self.color:
-                    moves.append((r, c))
-                    break
+                    elif target.color != self.color:
+                        moves.append((r, c))
+                        break
                 r += dr
                 c += dc
         return moves
@@ -78,7 +81,16 @@ class Knight(Piece):
             if 0 <= r < 8 and 0 <= c < 8:
                 target = board.board[r][c]
                 if not target or target.color != self.color:
-                    moves.append((r, c))
+                    # For Knightmare Loop, restrict captures on second move if already captured
+                    if gui and getattr(gui, "knightmare_doing_second_move", False):
+                        if gui.knightmare_state and gui.knightmare_state.get("capture_done", False):
+                            # Only allow non-capture moves on second move if already captured
+                            if not target:
+                                moves.append((r, c))
+                        else:
+                            moves.append((r, c))
+                    else:
+                        moves.append((r, c))
         return moves
 
 class Pawn(Piece):

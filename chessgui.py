@@ -2,7 +2,7 @@ import os
 from tkinter import Tk, Frame, Button, messagebox, simpledialog
 from board import Board
 from PIL import Image, ImageTk
-from card import PawnBoostCard, BishopGhostCard, DestroyOpponentPieceCard
+from card import PawnBoostCard, BishopGhostCard, DestroyOpponentPieceCard, KnightmareLoopCard
 
 class ChessGUI:
     def __init__(self, root):
@@ -22,11 +22,15 @@ class ChessGUI:
 
         # Card system
         self.hands = {
-            'white': [PawnBoostCard(), BishopGhostCard(), DestroyOpponentPieceCard()],
-            'black': [PawnBoostCard(), BishopGhostCard(), DestroyOpponentPieceCard()]
+            'white': [PawnBoostCard(), BishopGhostCard(), DestroyOpponentPieceCard(), KnightmareLoopCard()],
+            'black': [PawnBoostCard(), BishopGhostCard(), DestroyOpponentPieceCard(), KnightmareLoopCard()]
         }
         self.bishop_ghost_active = {'white': False, 'black': False}
         self.pawn_boost_active = {'white': False, 'black': False}
+        self.knightmare_active = {'white': False, 'black': False}
+        self.knightmare_state = None  # Track knight pos, capture, moves for this turn
+        self.knightmare_doing_second_move = False
+
         self.active_card = None  # Track the card being played
         self.game_over = False
 
@@ -121,7 +125,6 @@ class ChessGUI:
 
         # If hand is empty, skip prompt and allow direct board interaction
         if not hand:
-            # No prompt, just let user move
             return
 
         card_options = "\n".join([f"{i+1}. {card.name} ({card.description})" for i, card in enumerate(hand)])
@@ -134,20 +137,30 @@ class ChessGUI:
             return
 
         if move_or_card.strip().lower() == "move":
-            # Wait for board click as usual
             return
         elif move_or_card.strip().isdigit():
             idx = int(move_or_card.strip()) - 1
             if 0 <= idx < len(hand):
                 card = hand[idx]
                 if card.can_play(self):
-                    self.active_card = card    # Set active card
-                    # Activate effect flags if needed
+                    self.active_card = card
                     if isinstance(card, BishopGhostCard):
                         self.bishop_ghost_active[self.turn] = True
                     elif isinstance(card, PawnBoostCard):
                         self.pawn_boost_active[self.turn] = True
-                    # For DestroyOpponentPieceCard, prompt for action immediately
+                    elif isinstance(card, KnightmareLoopCard):
+                        self.knightmare_active[self.turn] = True
+                        self.knightmare_state = {
+                            "knight_pos": None,
+                            "capture_done": False,
+                            "first_move_done": False
+                        }
+                        self.knightmare_doing_second_move = False
+                        messagebox.showinfo("Card Activated", f"{card.name} is active! Select your knight to move twice this turn.")
+                        self.selected = None
+                        self.valid_moves = []
+                        self.draw_board()
+                        return
                     if isinstance(card, DestroyOpponentPieceCard):
                         self.handle_destroy_card()
                         if card in self.hands[self.turn]:
@@ -170,7 +183,6 @@ class ChessGUI:
             self.show_turn()
 
     def handle_destroy_card(self):
-        # Allow destroying any opponent piece on the board except king or queen
         opponent = 'black' if self.turn == 'white' else 'white'
         valid_targets = []
         for row in range(8):
@@ -204,11 +216,13 @@ class ChessGUI:
     def end_turn(self):
         self.bishop_ghost_active[self.turn] = False
         self.pawn_boost_active[self.turn] = False
+        self.knightmare_active[self.turn] = False
+        self.knightmare_state = None
+        self.knightmare_doing_second_move = False
         self.active_card = None
         self.selected = None
         self.valid_moves = []
 
-        # Check for game end
         opponent = 'black' if self.turn == 'white' else 'white'
         if self.board.is_checkmate(opponent):
             self.draw_board()
@@ -231,11 +245,111 @@ class ChessGUI:
         if self.game_over:
             return
 
+        # Knightmare Loop logic
+        if self.knightmare_active[self.turn]:
+            # First selection: select knight to use
+            if not self.knightmare_state["first_move_done"]:
+                piece = self.board.board[row][col]
+                if piece and piece.color == self.turn and piece.__class__.__name__.lower() == "knight":
+                    self.selected = (row, col)
+                    all_moves = piece.get_valid_moves(self.board, row, col, self)
+                    self.valid_moves = []
+                    for (r, c) in all_moves:
+                        board_copy = self.board.copy()
+                        board_copy.move_piece(row, col, r, c)
+                        if not board_copy.is_in_check(self.turn):
+                            self.valid_moves.append((r, c))
+                    self.draw_board()
+                elif self.selected and (row, col) in self.valid_moves:
+                    from_row, from_col = self.selected
+                    moving_piece = self.board.board[from_row][from_col]
+                    target = self.board.board[row][col]
+                    capture = target is not None
+                    self.board.move_piece(from_row, from_col, row, col)
+                    # Save which knight is moving, and whether capture occurred
+                    self.knightmare_state["knight_pos"] = (row, col)
+                    self.knightmare_state["capture_done"] = capture
+                    self.knightmare_state["first_move_done"] = True
+                    self.knightmare_doing_second_move = True
+                    # Now highlight the same knight for its second move
+                    self.selected = (row, col)
+                    all_moves = moving_piece.get_valid_moves(self.board, row, col, self)
+                    self.valid_moves = []
+                    for (r, c) in all_moves:
+                        # On second move, restrict captures if already captured
+                        if capture:
+                            if self.board.board[r][c] is None:
+                                board_copy = self.board.copy()
+                                board_copy.move_piece(row, col, r, c)
+                                if not board_copy.is_in_check(self.turn):
+                                    self.valid_moves.append((r, c))
+                        else:
+                            board_copy = self.board.copy()
+                            board_copy.move_piece(row, col, r, c)
+                            if not board_copy.is_in_check(self.turn):
+                                self.valid_moves.append((r, c))
+                    self.draw_board()
+                else:
+                    self.selected = None
+                    self.valid_moves = []
+                    self.draw_board()
+            # Second move
+            elif self.knightmare_doing_second_move and self.selected:
+                from_row, from_col = self.selected
+                knight_pos = self.knightmare_state["knight_pos"]
+                if (from_row, from_col) != knight_pos:
+                    self.selected = knight_pos
+                    from_row, from_col = knight_pos
+                piece = self.board.board[from_row][from_col]
+                if piece is None or piece.__class__.__name__.lower() != "knight":
+                    self.end_turn()
+                    return
+                if (row, col) in self.valid_moves:
+                    target = self.board.board[row][col]
+                    # On second move, can only capture if no capture yet
+                    if self.knightmare_state["capture_done"]:
+                        if target is not None:
+                            # Invalid, can't capture again
+                            return
+                    self.board.move_piece(from_row, from_col, row, col)
+                    # Clean up
+                    if self.active_card and self.active_card in self.hands[self.turn]:
+                        self.hands[self.turn].remove(self.active_card)
+                    self.active_card = None
+                    self.knightmare_active[self.turn] = False
+                    self.knightmare_state = None
+                    self.knightmare_doing_second_move = False
+                    self.selected = None
+                    self.valid_moves = []
+                    self.draw_board()
+                    # Check checkmate/stalemate
+                    opponent = 'black' if self.turn == 'white' else 'white'
+                    if self.board.is_checkmate(opponent):
+                        self.draw_board()
+                        messagebox.showinfo("Checkmate", f"{self.turn.capitalize()} wins by checkmate!")
+                        self.game_over = True
+                        self.quit_game()
+                        return
+                    elif self.board.is_stalemate(opponent):
+                        self.draw_board()
+                        messagebox.showinfo("Stalemate", "Stalemate! The game is a draw.")
+                        self.game_over = True
+                        self.quit_game()
+                        return
+                    elif self.board.is_in_check(opponent):
+                        messagebox.showinfo("Check", f"{('Black' if self.turn == 'white' else 'White')} is in check!")
+                    self.end_turn()
+                    return
+                else:
+                    # Did not pick valid move, stay on knight
+                    self.selected = (from_row, from_col)
+                    self.draw_board()
+            return
+
         piece = self.board.board[row][col]
         if self.selected:
             from_row, from_col = self.selected
             moving_piece = self.board.board[from_row][from_col]
-
             if (row, col) in self.valid_moves:
                 self.board.move_piece(from_row, from_col, row, col)
                 # Remove card if active
